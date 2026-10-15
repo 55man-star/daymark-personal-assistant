@@ -168,7 +168,7 @@ const taskActionBeforeCelebrate=taskAction;taskAction=(id,action)=>{const before
 const saveTaskBeforeAttention=$('saveTask').onclick;$('saveTask').onclick=()=>{saveTaskBeforeAttention?.();window.renderAttention?.()};const deleteTaskBeforeAttention=deleteButton.onclick;deleteButton.onclick=()=>{deleteTaskBeforeAttention?.();window.renderAttention?.()};
 
 // 统一接管任务卡片按钮，避免动态重绘后出现“看得到但按不了”。
-const taskListForEvents=$('taskList');taskListForEvents?.addEventListener('click',e=>{const target=e.target.closest('button,[data-action],.status');if(!target||!taskListForEvents.contains(target))return;const id=target.dataset.id||target.parentElement?.querySelector('[data-id]')?.dataset.id;if(!id)return;if(target.matches('[data-edit]')){e.preventDefault();e.stopImmediatePropagation();openTaskEditor(id);return}if(target.matches('[data-action]')){e.preventDefault();e.stopImmediatePropagation();const action=target.dataset.action;if(action==='delay'&&!confirm('要将这个任务推迟 15 分钟吗？'))return;if(action==='skip'&&!confirm('确定跳过这个任务吗？之后仍可编辑或撤回。'))return;taskAction(id,action);return}if(target.classList.contains('status')){e.preventDefault();e.stopImmediatePropagation();taskAction(id,'done')}},{capture:true});
+const taskListForEvents=$('taskList');taskListForEvents?.addEventListener('click',e=>{const target=e.target.closest('button,[data-action],.status');if(!target||!taskListForEvents.contains(target))return;const id=target.dataset.id||target.parentElement?.querySelector('[data-id]')?.dataset.id;if(!id)return;if(target.matches('[data-edit]')){e.preventDefault();e.stopImmediatePropagation();openTaskEditor(id);return}if(target.matches('[data-action]')){e.preventDefault();e.stopImmediatePropagation();const action=target.dataset.action;if(action==='skip'&&!confirm('确定跳过这个任务吗？之后仍可编辑或撤回。'))return;taskAction(id,action);return}if(target.classList.contains('status')){e.preventDefault();e.stopImmediatePropagation();taskAction(id,'done')}},{capture:true});
 </script>
 <style>
 .task-actions .state-action{font-weight:800}.task-actions .state-action[data-state="running"]{background:var(--lime);color:#3f4e00}.task-actions .delay-action{min-width:76px}.task-actions .status.待开始,.task-actions .status.进行中{display:none}
@@ -185,4 +185,91 @@ renderTasks=renderTasksCompact;renderTasksCompact();
 function getNativeNotifications(){return window.Capacitor?.Plugins?.LocalNotifications||null}
 async function syncNativeNotifications(){const plugin=getNativeNotifications();if(!plugin)return false;let permission=await plugin.checkPermissions();if(permission.display!=='granted'){permission=await plugin.requestPermissions()}if(permission.display!=='granted')return false;const idFor=(prefix,t)=>Number(`${prefix}${String(t.id).replace(/\\D/g,'').slice(-7)||Date.now()%10000000}`);await plugin.cancel({notifications:tasks.flatMap(t=>[1,2,3].map(prefix=>({id:idFor(prefix,t)})))}).catch(()=>{});const now=Date.now(),notifications=[];tasks.filter(t=>t.status!=='已完成'&&t.status!=='未完成'&&t.date&&t.startTime).forEach(t=>{const start=new Date(`${t.date}T${t.startTime}:00`),reminder=new Date(start.getTime()-Number(t.reminderTime||0)*60000),followup=new Date(start.getTime()+15*60000),base=idFor(1,t);[[reminder,`5 分钟后开始：${t.title}`],[start,`该开始了：${t.title}`],[followup,`${t.title} 还没有开始，要推迟还是跳过？`]].forEach(([at,body],index)=>{if(at.getTime()>now+30000)notifications.push({id:base+index,title:'Daymark 提醒',body,schedule:{at},extra:{taskId:t.id}})})});if(notifications.length)await plugin.schedule({notifications});localStorage.setItem('daymark-native-notifications','1');return true}
 window.daymarkSyncNativeNotifications=syncNativeNotifications;const notifyButton=$('enableNotify'),notifyBeforeNative=notifyButton.onclick;notifyButton.onclick=async()=>{if(getNativeNotifications()){const ok=await syncNativeNotifications();$('notifyState').textContent=ok?'后台提醒已开启':'未授权';notifyButton.textContent=ok?'已连接手机提醒':'开启';return}notifyBeforeNative?.()};const taskActionBeforeNative=taskAction;taskAction=(id,action)=>{taskActionBeforeNative(id,action);syncNativeNotifications().catch(()=>{})};const saveTaskBeforeNative=$('saveTask').onclick;$('saveTask').onclick=()=>{saveTaskBeforeNative?.();syncNativeNotifications().catch(()=>{})};
+</script>
+<style>
+@media(max-width:760px){
+  .task{position:relative;overflow:hidden;touch-action:pan-y;transition:transform .18s ease}
+  .task.swipe-open{transform:translateX(-78px)}
+  .task-swipe-delete{position:absolute;z-index:4;right:0;top:0;bottom:0;width:78px;border-radius:0 17px 17px 0;background:#f3b0a4;color:#642b25;font-weight:800;font-size:12px;display:grid;place-items:center}
+  .stage-grip{touch-action:none;user-select:none;cursor:grab;padding:5px 3px;margin:-5px -3px}
+}
+</style>
+<script>
+// 手机任务卡：左滑显示删除，删除前确认，并提供可撤回入口。
+const taskListForSwipe=$('taskList');
+function installSwipeDelete(){
+  taskListForSwipe?.querySelectorAll('.task').forEach(task=>{
+    if(task.querySelector('.task-swipe-delete'))return;
+    const id=task.querySelector('[data-id]')?.dataset.id;
+    if(!id)return;
+    const button=document.createElement('button');
+    button.type='button';button.className='task-swipe-delete';button.textContent='删除';button.dataset.swipeDelete=id;button.setAttribute('aria-label','删除任务');
+    task.prepend(button);
+  });
+}
+installSwipeDelete();
+new MutationObserver(installSwipeDelete).observe(taskListForSwipe,{childList:true});
+let swipeState=null;
+taskListForSwipe?.addEventListener('touchstart',e=>{
+  const task=e.target.closest('.task');if(!task)return;
+  const point=e.changedTouches[0];swipeState={task,startX:point.clientX,startY:point.clientY,moved:false};
+},{passive:true});
+taskListForSwipe?.addEventListener('touchmove',e=>{
+  if(!swipeState)return;
+  const point=e.changedTouches[0],dx=point.clientX-swipeState.startX,dy=point.clientY-swipeState.startY;
+  if(Math.abs(dy)>Math.abs(dx)){swipeState=null;return}
+  if(dx<-24){swipeState.task.classList.add('swipe-open');swipeState.moved=true}
+  if(dx>24){swipeState.task.classList.remove('swipe-open');swipeState.moved=true}
+},{passive:true});
+taskListForSwipe?.addEventListener('touchend',()=>{swipeState=null},{passive:true});
+taskListForSwipe?.addEventListener('click',e=>{
+  const button=e.target.closest('[data-swipe-delete]');if(!button)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(!confirm('确定删除这个任务吗？删除后仍可恢复。'))return;
+  const task=tasks.find(item=>item.id===button.dataset.swipeDelete);if(!task)return;
+  const snapshot={...task};tasks=tasks.filter(item=>item.id!==snapshot.id);save();renderTasks();addEditButtons();window.renderAttention?.();
+  const toast=document.createElement('div');toast.className='undo-toast';toast.innerHTML='<span>任务已删除</span><button type="button">撤回</button>';document.body.appendChild(toast);
+  const remove=()=>toast.remove();toast.querySelector('button').onclick=()=>{if(!tasks.some(item=>item.id===snapshot.id)){tasks.push(snapshot);tasks.sort((a,b)=>String(a.startTime).localeCompare(String(b.startTime)));save();renderTasks();addEditButtons();window.renderAttention?.()}remove()};setTimeout(remove,5000);
+},{capture:true});
+
+// 推迟：按钮只显示“推迟”；第一次确认新的时间，连续再次推迟直接增加 15 分钟。
+const taskActionBeforeDelayConfirm=taskAction;const delayConfirmed=new Set();
+taskAction=(id,action)=>{
+  if(action!=='delay'){delayConfirmed.delete(id);taskActionBeforeDelayConfirm(id,action);return}
+  const task=tasks.find(item=>item.id===id);if(!task)return;
+  const [hour,minute]=String(task.startTime||'00:00').split(':').map(Number),next=hour*60+minute+15;
+  const nextTime=`${String(Math.floor(next/60)%24).padStart(2,'0')}:${String(next%60).padStart(2,'0')}`;
+  if(!delayConfirmed.has(id)&&!confirm(`确定将“${task.title}”推迟到 ${nextTime} 吗？`))return;
+  delayConfirmed.add(id);taskActionBeforeDelayConfirm(id,'delay');
+};
+function normalizeDelayButtons(){taskListForSwipe?.querySelectorAll('.delay-action').forEach(button=>button.textContent='推迟')}
+normalizeDelayButtons();new MutationObserver(normalizeDelayButtons).observe(taskListForSwipe,{childList:true});
+
+// 项目阶段：桌面保留原生拖动，手机从左侧拖动手柄进行触摸排序。
+window.addEventListener('load',()=>{
+  const projectList=$('projectList');if(!projectList)return;
+  let touchDrag=null;
+  const finishTouchDrag=()=>{
+    if(!touchDrag)return;
+    const {stage,projectId,moved}=touchDrag,card=stage.closest('[data-project-id]');
+    stage.classList.remove('dragging');touchDrag=null;
+    if(!moved||!card)return;
+    const project=projects.find(item=>item.id===projectId);if(!project)return;
+    const currentName=project.stages?.[project.current],rows=[...card.querySelectorAll('.stage')];
+    project.stages=rows.map(row=>row.querySelector('.stage-input')?.value.trim()||'新阶段').filter(Boolean);
+    project.current=Math.max(0,project.stages.indexOf(currentName));project.next=project.stages[project.current]||project.stages[0]||'添加一个阶段开始推进';save();renderProjects();
+  };
+  projectList.addEventListener('pointerdown',e=>{
+    const grip=e.target.closest('.stage-grip'),stage=grip?.closest('.stage');if(!stage)return;
+    const card=stage.closest('[data-project-id]');if(!card)return;
+    touchDrag={stage,projectId:card.dataset.projectId,moved:false};stage.setPointerCapture?.(e.pointerId);stage.classList.add('dragging');e.preventDefault();
+  });
+  projectList.addEventListener('pointermove',e=>{
+    if(!touchDrag)return;
+    const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.stage');if(!over||over===touchDrag.stage||over.closest('[data-project-id]')?.dataset.projectId!==touchDrag.projectId)return;
+    const rect=over.getBoundingClientRect(),list=over.parentElement,before=e.clientY<rect.top+rect.height/2;
+    list.insertBefore(touchDrag.stage,before?over:over.nextSibling);touchDrag.moved=true;
+  });
+  projectList.addEventListener('pointerup',finishTouchDrag);projectList.addEventListener('pointercancel',finishTouchDrag);
+});
 </script></body></html>
