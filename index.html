@@ -25,6 +25,24 @@
 }
 </style>
 <style>
+/* 顶部焦点区统一精简：只保留开始按钮、当前任务内容和时间 */
+.hero{gap:12px;margin-bottom:12px}
+.hero-copy,.focus-card{min-height:132px;height:132px;padding:18px 22px;border-radius:22px}
+.hero-copy .eyebrow,.hero-copy h1,.hero-foot p,.focus-card p,.focus-meta span:first-child{display:none}
+.hero-copy{justify-content:center}
+.hero-foot{display:block}
+.hero-foot .primary{display:block;width:100%;text-align:center;padding:11px 14px}
+.focus-card{justify-content:space-between}
+.focus-card .eyebrow{font-size:10px}
+.focus-card h2{font-size:27px;margin:6px 0;line-height:1.1}
+.focus-meta{margin-top:auto;padding-top:9px;font-size:11px}
+.focus-meta span:last-child{margin-left:auto}
+@media(max-width:760px){
+  .hero-copy,.focus-card{height:auto;min-height:0;padding:14px 16px;border-radius:18px}
+  .focus-card h2{font-size:22px}
+}
+</style>
+<style>
 /* 手机端顶部只保留：开始按钮、当前任务内容、时间 */
 @media(max-width:760px){
   .hero{gap:8px;margin-bottom:10px}
@@ -58,6 +76,21 @@
 </style>
 <style>
 .task-list .task{background:#fff;border-left:4px solid #b8d8d7}.task-list .task:nth-child(5n+1) .task-time b{color:#4f8987}.task-list .task:nth-child(5n+2){border-left-color:#c8b9dd}.task-list .task:nth-child(5n+2) .task-time b{color:#806da0}.task-list .task:nth-child(5n+3){border-left-color:#e6c28e}.task-list .task:nth-child(5n+3) .task-time b{color:#a87936}.task-list .task:nth-child(5n+4){border-left-color:#b8d49c}.task-list .task:nth-child(5n+4) .task-time b{color:#668c4b}.task-list .task:nth-child(5n+5){border-left-color:#e5b6a9}.task-list .task:nth-child(5n+5) .task-time b{color:#a96658}.task-list .task.done{opacity:.68}
+</style>
+<style>
+/* 最终覆盖：顶部焦点区在所有屏幕尺寸下都保持紧凑 */
+.hero{gap:12px!important;margin-bottom:12px!important}
+.hero-copy,.focus-card{min-height:132px!important;height:132px!important;padding:18px 22px!important;border-radius:22px!important}
+.hero-copy .eyebrow,.hero-copy h1,.hero-foot p,.focus-card p,.focus-meta span:first-child{display:none!important}
+.hero-copy{justify-content:center!important}
+.hero-foot{display:block!important}
+.hero-foot .primary{display:block!important;width:100%!important;text-align:center!important;padding:11px 14px!important}
+.focus-card{justify-content:space-between!important}
+.focus-card .eyebrow{font-size:10px!important}
+.focus-card h2{font-size:27px!important;margin:6px 0!important;line-height:1.1!important}
+.focus-meta{margin-top:auto!important;padding-top:9px!important;font-size:11px!important}
+.focus-meta span:last-child{margin-left:auto!important}
+@media(max-width:760px){.hero-copy,.focus-card{height:auto!important;min-height:0!important;padding:14px 16px!important;border-radius:18px!important}.focus-card h2{font-size:22px!important}}
 </style>
 <script>
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
