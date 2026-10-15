@@ -171,7 +171,7 @@ const saveTaskBeforeAttention=$('saveTask').onclick;$('saveTask').onclick=()=>{s
 const taskListForEvents=$('taskList');taskListForEvents?.addEventListener('click',e=>{const target=e.target.closest('button,[data-action],.status');if(!target||!taskListForEvents.contains(target))return;const id=target.dataset.id||target.parentElement?.querySelector('[data-id]')?.dataset.id;if(!id)return;if(target.matches('[data-edit]')){e.preventDefault();e.stopImmediatePropagation();openTaskEditor(id);return}if(target.matches('[data-action]')){e.preventDefault();e.stopImmediatePropagation();const action=target.dataset.action;if(action==='skip'&&!confirm('确定跳过这个任务吗？之后仍可编辑或撤回。'))return;taskAction(id,action);return}if(target.classList.contains('status')){e.preventDefault();e.stopImmediatePropagation();taskAction(id,'done')}},{capture:true});
 </script>
 <style>
-.task-actions .state-action{font-weight:800}.task-actions .state-action[data-state="running"]{background:var(--lime);color:#3f4e00}.task-actions .delay-action{min-width:76px}.task-actions .status.待开始,.task-actions .status.进行中{display:none}
+.task-actions .state-action{font-weight:800}.task-actions .state-action[data-state="running"]{background:var(--lime);color:#3f4e00}.task-actions .delay-action{min-width:0;width:auto}.task-actions .status.待开始,.task-actions .status.进行中{display:none}
 </style>
 <script>
 // 任务状态只保留一个主状态按钮：开始 -> 进行中。
