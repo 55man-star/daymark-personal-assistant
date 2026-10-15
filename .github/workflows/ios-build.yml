@@ -20,6 +20,11 @@ jobs:
       - name: Install JavaScript dependencies
         run: npm install
 
+      - name: Prepare web assets
+        run: |
+          mkdir -p www
+          cp index.html manifest.json sw.js icon.svg www/
+
       - name: Generate Capacitor iOS project
         run: |
           npx cap add ios
