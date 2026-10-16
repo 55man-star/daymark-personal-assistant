@@ -272,4 +272,25 @@ window.addEventListener('load',()=>{
   });
   projectList.addEventListener('pointerup',finishTouchDrag);projectList.addEventListener('pointercancel',finishTouchDrag);
 });
+</script>
+<style>
+.task-note .priority-label{display:inline-flex;align-items:center;margin-left:4px;padding:2px 7px;border-radius:999px;font-size:10px;font-weight:800;line-height:1.25;white-space:nowrap}
+.task-note .priority-label.priority-normal{background:#f1f1ed;color:#77766e}
+.task-note .priority-label.priority-important{background:#fff0d5;color:#9a5b18}
+.task-note .priority-label.priority-urgent{background:#ffe1dc;color:#a33f35}
+.task.done .priority-label{opacity:.75}
+</style>
+<script>
+// 优先级只在备注行局部强调，避免整张任务卡片铺色。
+function enhancePriorityLabels(){
+  document.querySelectorAll('#taskList .task-note').forEach(note=>{
+    if(note.dataset.priorityStyled)return;
+    const parts=note.textContent.split(' · '),priority=(parts.pop()||'普通').trim();
+    const kind=['紧急','必须完成','高'].includes(priority)?'urgent':['重要'].includes(priority)?'important':'normal';
+    note.innerHTML=`${parts.join(' · ')} <span class="priority-label priority-${kind}">${priority}</span>`;
+    note.dataset.priorityStyled='1';
+  });
+}
+enhancePriorityLabels();
+new MutationObserver(enhancePriorityLabels).observe($('taskList'),{childList:true});
 </script></body></html>
