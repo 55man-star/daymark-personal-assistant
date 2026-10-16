@@ -336,7 +336,41 @@ const focusButton=$('focusBtn'),focusHero=focusButton?.closest('.hero-copy'),tas
 if(focusButton&&focusHero&&taskPanel&&!taskPanel.querySelector('.task-panel-start')){const actionWrap=document.createElement('div');actionWrap.className='task-panel-start';actionWrap.appendChild(focusButton);taskPanel.appendChild(actionWrap);focusHero.remove();focusButton.classList.add('task-panel-start-button');document.querySelector('.hero')?.classList.add('hero-single')}
 const reminderPanel=[...document.querySelectorAll('#meView .panel')].find(panel=>panel.querySelector('.section-title')?.textContent.trim()==='提醒设置');
 if(reminderPanel){reminderPanel.classList.add('reminder-panel-bottom');$('meView').appendChild(reminderPanel)}
+const focusActionWrap=focusButton?.closest('.task-panel-start'),heroBlock=document.querySelector('.hero');
+if(focusActionWrap&&heroBlock&&!focusActionWrap.classList.contains('focus-action-below')){focusActionWrap.classList.add('focus-action-below');heroBlock.insertAdjacentElement('afterend',focusActionWrap)}
+// 项目批量管理：多选项目后统一删除，项目内任务保留并解除关联。
+const projectViewForBulk=$('projectsView'),projectListForBulk=$('projectList');
+if(projectViewForBulk&&projectListForBulk&&!$('projectBulkBar')){
+  const bulkBar=document.createElement('div');bulkBar.id='projectBulkBar';bulkBar.className='project-bulk-bar';bulkBar.innerHTML='<label class="bulk-select-all"><input id="projectSelectAll" type="checkbox"> 全选</label><span id="projectSelectedCount">已选 0 个</span><button id="deleteSelectedProjects" type="button" disabled>删除所选</button>';projectViewForBulk.insertBefore(bulkBar,projectListForBulk);
+  const selectAll=$('projectSelectAll'),count=$('projectSelectedCount'),deleteSelected=$('deleteSelectedProjects');
+  function selectedProjectIds(){return [...projectListForBulk.querySelectorAll('.project-select:checked')].map(input=>input.dataset.projectId)}
+  function updateBulkState(){const boxes=[...projectListForBulk.querySelectorAll('.project-select')],selected=boxes.filter(box=>box.checked).length;count.textContent=`已选 ${selected} 个`;deleteSelected.disabled=!selected;selectAll.checked=!!boxes.length&&selected===boxes.length;selectAll.indeterminate=selected>0&&selected<boxes.length}
+  function decorateProjectCards(){projectListForBulk.querySelectorAll('[data-project-id]').forEach(card=>{if(card.querySelector('.project-select'))return;const input=document.createElement('input');input.type='checkbox';input.className='project-select';input.dataset.projectId=card.dataset.projectId;input.setAttribute('aria-label',`选择项目 ${card.querySelector('.card-title')?.textContent||''}`);card.querySelector('.card-row')?.prepend(input)});updateBulkState()}
+  selectAll.onchange=()=>{projectListForBulk.querySelectorAll('.project-select').forEach(input=>input.checked=selectAll.checked);updateBulkState()};projectListForBulk.addEventListener('change',e=>{if(e.target.matches('.project-select'))updateBulkState()});
+  deleteSelected.onclick=()=>{const ids=selectedProjectIds();if(!ids.length)return;if(!confirm(`确定删除选中的 ${ids.length} 个项目吗？项目阶段会被删除，关联任务会保留。`))return;projects=projects.filter(project=>!ids.includes(project.id));tasks=tasks.map(task=>ids.includes(task.projectId)?{...task,projectId:null}:task);save();renderProjects()};new MutationObserver(decorateProjectCards).observe(projectListForBulk,{childList:true,subtree:true});decorateProjectCards();
+}
+// 今日任务批量管理：在今日列表中选择并一次删除多项任务。
+const todayTaskList=$('taskList'),todayTaskPanel=todayTaskList?.parentElement;
+if(todayTaskList&&todayTaskPanel&&!$('todayBulkBar')){
+  const todayBulkBar=document.createElement('div');todayBulkBar.id='todayBulkBar';todayBulkBar.className='today-bulk-bar';todayBulkBar.innerHTML='<label><input id="todaySelectAll" type="checkbox"> 全选</label><span id="todaySelectedCount">已选 0 项</span><button id="deleteSelectedToday" type="button" disabled>删除所选</button>';todayTaskPanel.insertBefore(todayBulkBar,todayTaskList);
+  const selectAllToday=$('todaySelectAll'),selectedCountToday=$('todaySelectedCount'),deleteSelectedToday=$('deleteSelectedToday');
+  function selectedTodayIds(){return [...todayTaskList.querySelectorAll('.today-task-select:checked')].map(input=>input.dataset.taskId)}
+  function updateTodayBulkState(){const boxes=[...todayTaskList.querySelectorAll('.today-task-select')],selected=boxes.filter(box=>box.checked).length;selectedCountToday.textContent=`已选 ${selected} 项`;deleteSelectedToday.disabled=!selected;selectAllToday.checked=!!boxes.length&&selected===boxes.length;selectAllToday.indeterminate=selected>0&&selected<boxes.length}
+  function decorateTodayTasks(){todayTaskList.querySelectorAll('.task').forEach(card=>{if(card.querySelector('.today-task-select'))return;const id=card.querySelector('[data-id]')?.dataset.id;if(!id)return;const input=document.createElement('input');input.type='checkbox';input.className='today-task-select';input.dataset.taskId=id;input.setAttribute('aria-label',`选择任务 ${card.querySelector('.task-title')?.textContent||''}`);card.querySelector('.task-time')?.prepend(input)});updateTodayBulkState()}
+  selectAllToday.onchange=()=>{todayTaskList.querySelectorAll('.today-task-select').forEach(input=>input.checked=selectAllToday.checked);updateTodayBulkState()};todayTaskList.addEventListener('change',e=>{if(e.target.matches('.today-task-select'))updateTodayBulkState()});
+  deleteSelectedToday.onclick=()=>{const ids=selectedTodayIds();if(!ids.length)return;if(!confirm(`确定删除选中的 ${ids.length} 项今日任务吗？删除后仍可重新添加。`))return;tasks=tasks.filter(task=>!ids.includes(task.id));save();renderTasks();addEditButtons();window.renderAttention?.()};new MutationObserver(decorateTodayTasks).observe(todayTaskList,{childList:true,subtree:true});decorateTodayTasks();
+}
 </script>
 <style>
-.hero.hero-single{grid-template-columns:1fr!important}.task-panel-start{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}.task-panel-start-button{display:block;width:100%;text-align:center;padding:11px 14px}.task-panel-start-button:hover{background:#333}.reminder-panel-bottom{margin-top:18px}@media(max-width:760px){.task-panel-start{margin-top:12px;padding-top:12px}}
+.hero.hero-single{grid-template-columns:1fr!important}.task-panel-start{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}.task-panel-start-button{display:block;width:100%;text-align:center;padding:11px 14px}.task-panel-start-button:hover{background:#333}.focus-action-below{margin:0 0 14px;padding-top:0;border-top:0}.reminder-panel-bottom{margin-top:18px}.project-bulk-bar{display:flex;align-items:center;gap:12px;margin:-2px 0 12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.72);color:var(--muted);font-size:11px}.bulk-select-all{display:flex;align-items:center;gap:6px;color:var(--ink);font-weight:700}.project-bulk-bar input{accent-color:var(--ink)}.project-bulk-bar button{margin-left:auto;padding:7px 10px;border-radius:999px;background:#f0f0ed;color:#8a8a85;font-size:10px}.project-bulk-bar button:not(:disabled){background:#ffe1dc;color:#87483f;font-weight:800}.project-bulk-bar button:disabled{cursor:not-allowed;opacity:.65}.project-card .card-row{align-items:center}.project-select{width:17px;height:17px;flex:none;accent-color:var(--ink)}@media(max-width:760px){.task-panel-start{margin-top:12px;padding-top:12px}.focus-action-below{margin-bottom:10px}.project-bulk-bar{margin:0 0 10px;padding:9px 10px}}
+</style>
+<style>
+.today-bulk-bar{display:flex;align-items:center;gap:12px;margin:0 0 12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.72);color:var(--muted);font-size:11px}
+.today-bulk-bar label{display:flex;align-items:center;gap:6px;color:var(--ink);font-weight:700}
+.today-bulk-bar input,.today-task-select{accent-color:var(--ink)}
+.today-bulk-bar button{margin-left:auto;padding:7px 10px;border-radius:999px;background:#f0f0ed;color:#8a8a85;font-size:10px}
+.today-bulk-bar button:not(:disabled){background:#ffe1dc;color:#87483f;font-weight:800}
+.today-bulk-bar button:disabled{cursor:not-allowed;opacity:.65}
+.today-task-select{display:block;width:15px;height:15px;margin:0 auto 4px}
+@media(max-width:760px){.today-bulk-bar{margin:0 0 10px;padding:9px 10px}.today-task-select{margin:0 0 4px}}
 </style></body></html>
