@@ -280,6 +280,17 @@ window.addEventListener('load',()=>{
 .task-note .priority-label.priority-urgent{background:#ffe1dc;color:#a33f35}
 .task.done .priority-label{opacity:.75}
 </style>
+<style>
+.duration-custom{margin-top:6px}
+.task-list .task.category-class{border-left-color:#9ecfcb!important}.task-list .task.category-class .task-time b{color:#4f8987!important}
+.task-list .task.category-study{border-left-color:#b9addd!important}.task-list .task.category-study .task-time b{color:#806da0!important}
+.task-list .task.category-gap{border-left-color:#a9c9e5!important}.task-list .task.category-gap .task-time b{color:#5680a6!important}
+.task-list .task.category-practice{border-left-color:#e6b878!important}.task-list .task.category-practice .task-time b{color:#a87936!important}
+.task-list .task.category-project{border-left-color:#d6cf72!important}.task-list .task.category-project .task-time b{color:#91872e!important}
+.task-list .task.category-exercise{border-left-color:#a9ce8c!important}.task-list .task.category-exercise .task-time b{color:#668c4b!important}
+.task-list .task.category-life{border-left-color:#e2b0a4!important}.task-list .task.category-life .task-time b{color:#a96658!important}
+.task-list .task.category-other{border-left-color:#c9c9c2!important}.task-list .task.category-other .task-time b{color:#77776f!important}
+</style>
 <script>
 // 优先级只在备注行局部强调，避免整张任务卡片铺色。
 function enhancePriorityLabels(){
@@ -293,4 +304,20 @@ function enhancePriorityLabels(){
 }
 enhancePriorityLabels();
 new MutationObserver(enhancePriorityLabels).observe($('taskList'),{childList:true});
+// 预计时长：预设常用时长，也支持选择“其他”后手动输入。
+const durationInput=$('taskDuration');
+if(durationInput&&!$('taskDurationSelect')){
+  const durationSelect=document.createElement('select');durationSelect.id='taskDurationSelect';durationSelect.innerHTML='<option value="30">30 分钟</option><option value="60">60 分钟</option><option value="90">90 分钟</option><option value="120">120 分钟</option><option value="custom">其他</option>';
+  const durationCustom=document.createElement('input');durationCustom.id='taskDurationCustom';durationCustom.className='duration-custom';durationCustom.type='number';durationCustom.min='1';durationCustom.max='1440';durationCustom.step='5';durationCustom.placeholder='请输入分钟数';durationCustom.hidden=true;
+  durationInput.type='hidden';durationInput.parentElement.insertBefore(durationSelect,durationInput);durationInput.parentElement.insertBefore(durationCustom,durationInput);
+  const syncDuration=()=>{const custom=durationSelect.value==='custom';durationCustom.hidden=!custom;if(custom)durationInput.value=durationCustom.value||'30';else durationInput.value=durationSelect.value};
+  durationSelect.addEventListener('change',syncDuration);durationCustom.addEventListener('input',syncDuration);
+  const resetDurationForm=resetTaskForm;resetTaskForm=()=>{resetDurationForm();durationSelect.value='30';durationCustom.value='30';syncDuration()};
+  const openDurationEditor=openTaskEditor;openTaskEditor=id=>{openDurationEditor(id);const value=durationInput.value||'30';durationSelect.value=['30','60','90','120'].includes(value)?value:'custom';durationCustom.value=value;syncDuration()};
+  const saveDuration=$('saveTask').onclick;$('saveTask').onclick=()=>{syncDuration();saveDuration?.()};syncDuration();
+}
+// 任务分类使用固定的柔和色边和时间文字，同一分类保持同一种颜色。
+const categoryKeys={上课:'class',学习:'study',补漏:'gap',实操:'practice',项目:'project',锻炼:'exercise',生活:'life',其他:'other'};
+function enhanceCategoryColors(){document.querySelectorAll('#taskList .task').forEach(task=>{if(task.dataset.categoryStyled)return;const id=task.querySelector('[data-id]')?.dataset.id,model=tasks.find(item=>item.id===id);if(!model)return;task.classList.add(`category-${categoryKeys[model.category]||'other'}`);task.dataset.categoryStyled='1'})}
+enhanceCategoryColors();new MutationObserver(enhanceCategoryColors).observe($('taskList'),{childList:true});
 </script></body></html>
