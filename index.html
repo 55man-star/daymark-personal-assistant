@@ -336,7 +336,9 @@ const focusButton=$('focusBtn'),focusHero=focusButton?.closest('.hero-copy'),tas
 if(focusButton&&focusHero&&taskPanel&&!taskPanel.querySelector('.task-panel-start')){const actionWrap=document.createElement('div');actionWrap.className='task-panel-start';actionWrap.appendChild(focusButton);taskPanel.appendChild(actionWrap);focusHero.remove();focusButton.classList.add('task-panel-start-button');document.querySelector('.hero')?.classList.add('hero-single')}
 const reminderPanel=[...document.querySelectorAll('#meView .panel')].find(panel=>panel.querySelector('.section-title')?.textContent.trim()==='提醒设置');
 if(reminderPanel){reminderPanel.classList.add('reminder-panel-bottom');$('meView').appendChild(reminderPanel)}
+const focusActionWrap=focusButton?.closest('.task-panel-start'),heroBlock=document.querySelector('.hero');
+if(focusActionWrap&&heroBlock&&!focusActionWrap.classList.contains('focus-action-below')){focusActionWrap.classList.add('focus-action-below');heroBlock.insertAdjacentElement('afterend',focusActionWrap)}
 </script>
 <style>
-.hero.hero-single{grid-template-columns:1fr!important}.task-panel-start{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}.task-panel-start-button{display:block;width:100%;text-align:center;padding:11px 14px}.task-panel-start-button:hover{background:#333}.reminder-panel-bottom{margin-top:18px}@media(max-width:760px){.task-panel-start{margin-top:12px;padding-top:12px}}
+.hero.hero-single{grid-template-columns:1fr!important}.task-panel-start{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}.task-panel-start-button{display:block;width:100%;text-align:center;padding:11px 14px}.task-panel-start-button:hover{background:#333}.focus-action-below{margin:0 0 14px;padding-top:0;border-top:0}.reminder-panel-bottom{margin-top:18px}@media(max-width:760px){.task-panel-start{margin-top:12px;padding-top:12px}.focus-action-below{margin-bottom:10px}}
 </style></body></html>
